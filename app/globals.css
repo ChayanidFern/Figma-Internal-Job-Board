@@ -1,26 +1,174 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --primary: #2d9cdb; /* สีฟ้าตามรูป */
+  --primary-hover: #2185be;
+  --danger: #eb5757; /* สีแดงตามรูป Archive */
+  --danger-hover: #c0392b;
+  --success: #27ae60; /* สีเขียวสำหรับปุ่ม Open */
+  --bg-color: #f3f6f9; /* พื้นหลังเทาอ่อน */
+  --text-dark: #333333;
+  --text-gray: #828282;
+  --border-color: #e0e0e0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', sans-serif; /* แนะนำให้ใช้ Font Inter หรือ Arial */
+  background-color: var(--bg-color);
+  color: var(--text-dark);
+  margin: 0;
+  padding: 0;
 }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar {
+  width: 250px;
+  background: white;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.content { padding: 30px; overflow-y: auto; height: 100%; }
+
+/* Sidebar Menu */
+.profile { display: flex; align-items: center; margin-bottom: 40px; }
+.profile-pic { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 10px; }
+.profile-name { font-weight: bold; font-size: 16px; }
+.profile-role { color: var(--text-gray); font-size: 12px; }
+
+.menu-item {
+  padding: 12px 15px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--text-gray);
+  font-weight: 500;
+  display: flex; align-items: center; gap: 10px;
+}
+.menu-item:hover { background-color: #f0f7ff; color: var(--primary); }
+.menu-item.active { background-color: #e6f6ff; color: var(--primary); border-left: 4px solid var(--primary); }
+
+/* Topbar */
+.topbar {
+  background: var(--primary); /* แถบสีฟ้าด้านบนตามรูป Search Job */
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 30px;
+  color: white;
+}
+.notification {
+  background: rgba(255,255,255,0.2);
+  padding: 8px;
+  border-radius: 50%;
+  margin-left: 15px;
+  cursor: pointer;
+}
+
+/* Cards & Containers */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  position: relative;
+}
+
+/* Inputs & Forms */
+.input-group { position: relative; width: 100%; }
+.input, .textarea, .select {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+  box-sizing: border-box;
+}
+.input:focus { border-color: var(--primary); }
+
+/* Buttons */
+button { cursor: pointer; transition: 0.2s; border: none; font-weight: 600; font-size: 14px; border-radius: 8px; }
+.btn-primary { background: var(--primary); color: white; padding: 10px 20px; }
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-danger { background: var(--danger); color: white; padding: 10px 20px; } /* ปุ่ม Archive สีแดง */
+.btn-danger:hover { background: var(--danger-hover); }
+
+.btn-blue { background: var(--primary); color: white; padding: 10px 20px; }
+
+.btn-create-top {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-right: 10px;
+}
+.btn-create-top:hover { background: rgba(255,255,255,0.3); }
+
+/* Search Bar Section */
+.search-section {
+  display: flex;
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  gap: 10px;
+}
+.search-btn {
+  background: #0047FF; /* สีน้ำเงินเข้มปุ่ม Search */
+  color: white;
+  padding: 0 25px;
+  border-radius: 8px;
+}
+
+/* Table */
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th { text-align: left; padding: 15px; background: #E0E0E0; color: #333; font-weight: 600; border-radius: 4px; } /* หัวตารางสีเทา */
+td { padding: 15px; border-bottom: 1px solid #eee; color: #333; }
+.badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-Open { background: #E6F8EF; color: var(--success); }
+.badge-Archived { background: #FDE8E8; color: var(--danger); }
+.btn-view { background: var(--primary); color: white; padding: 6px 15px; border-radius: 4px; font-size: 12px; }
+
+/* Dashboard Grid */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.stat-box { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.stat-num { font-size: 36px; font-weight: bold; color: var(--primary); margin: 10px 0; }
+.stat-label { color: var(--text-gray); }
+
+/* Modal / Popup Overlay */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  background: white; padding: 30px; border-radius: 12px; width: 500px;
+  text-align: center;
+  position: relative;
+}
+.close-icon { position: absolute; top: 20px; right: 20px; font-size: 24px; cursor: pointer; color: #999; }
+.modal-title { font-size: 22px; font-weight: bold; margin-bottom: 10px; text-align: left; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* Login Screen */
+.login-screen {
+  background: #AEE2FF; /* ฟ้าอ่อนตามรูป Login */
+  height: 100vh; display: flex; align-items: center; justify-content: center;
+}
+.login-card { background: white; padding: 50px; border-radius: 8px; width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
