@@ -1,9 +1,5 @@
 "use server";
 
-import sql from "@/lib/db";
-import { revalidatePath } from "next/cache";
-
-// --- Jobs Actions ---
 export type Job = {
   id: number;
   title: string;
@@ -13,58 +9,79 @@ export type Job = {
   date: string;
 };
 
-export async function getJobs() {
-  const jobs = await sql`SELECT * FROM jobs ORDER BY id DESC`;
-  return jobs.map((j) => ({ ...j, desc: j.description })) as Job[];
-}
-
-export async function createJob(title: string, dept: string, desc: string, date: string) {
-  await sql`INSERT INTO jobs (title, dept, description, status, date) VALUES (${title}, ${dept}, ${desc}, 'Open', ${date})`;
-  revalidatePath("/");
-}
-
-export async function updateJob(id: number, title: string, dept: string, desc: string, status: string) {
-  await sql`UPDATE jobs SET title = ${title}, dept = ${dept}, description = ${desc}, status = ${status} WHERE id = ${id}`;
-  revalidatePath("/");
-}
-
-export async function archiveJob(id: number) {
-  await sql`UPDATE jobs SET status = 'Archived' WHERE id = ${id}`;
-  revalidatePath("/");
-}
-
-export async function deleteJob(id: number) {
-  await sql`DELETE FROM jobs WHERE id = ${id}`;
-  revalidatePath("/");
-}
-
-// --- Applications Actions ---
 export type Application = {
   id: number;
   name: string;
   email: string;
   job_title: string;
-  status: string; // Pending, Passed, Failed
+  status: string;
   date: string;
 };
 
-export async function getApplications() {
-  const apps = await sql`SELECT * FROM applications ORDER BY id DESC`;
-  return apps as Application[];
+// ใช้ Global Variables จำลอง Database ชั่วคราว
+let jobs: Job[] = [
+  { id: 1, title: "Software Engineer", dept: "IT", desc: "Develop internal tools", status: "Open", date: "28/02/2026" },
+  { id: 2, title: "Marketing Manager", dept: "Marketing", desc: "Manage campaigns", status: "Closed", date: "25/02/2026" }
+];
+
+let applications: Application[] = [
+  { id: 1, name: "Somchai Jaidee", email: "somchai@email.com", job_title: "Software Engineer", status: "Pending", date: "28/02/2026" }
+];
+
+// --- Job Actions ---
+export async function getJobs() {
+  return jobs;
 }
 
-// ✅ เพิ่มฟังก์ชันสร้างผู้สมัครใหม่ (สำหรับการคีย์ข้อมูลเอง)
+export async function createJob(title: string, dept: string, desc: string, date: string) {
+  const newJob: Job = {
+    id: Date.now(), // สร้าง ID อัตโนมัติ
+    title,
+    dept,
+    desc,
+    status: "Open",
+    date
+  };
+  jobs.push(newJob);
+  return newJob;
+}
+
+export async function updateJob(id: number, title: string, dept: string, desc: string, status: string) {
+  const index = jobs.findIndex(j => j.id === id);
+  if (index > -1) {
+    jobs[index] = { ...jobs[index], title, dept, desc, status };
+  }
+}
+
+export async function deleteJob(id: number) {
+  jobs = jobs.filter(j => j.id !== id);
+}
+
+// --- Application Actions ---
+export async function getApplications() {
+  return applications;
+}
+
 export async function createApplication(name: string, email: string, job_title: string, date: string) {
-  await sql`INSERT INTO applications (name, email, job_title, status, date) VALUES (${name}, ${email}, ${job_title}, 'Pending', ${date})`;
-  revalidatePath("/");
+  const newApp: Application = {
+    id: Date.now(),
+    name,
+    email,
+    job_title,
+    status: "Pending",
+    date
+  };
+  applications.push(newApp);
+  return newApp;
 }
 
 export async function updateAppStatus(id: number, status: string) {
-  await sql`UPDATE applications SET status = ${status} WHERE id = ${id}`;
-  revalidatePath("/");
+  const index = applications.findIndex(a => a.id === id);
+  if (index > -1) {
+    applications[index].status = status;
+  }
 }
 
 export async function deleteApplication(id: number) {
-  await sql`DELETE FROM applications WHERE id = ${id}`;
-  revalidatePath("/");
+  applications = applications.filter(a => a.id !== id);
 }

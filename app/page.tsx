@@ -13,6 +13,7 @@ const IconJobs = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="non
 const IconDashboard = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>;
 const IconUsers = () => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const IconClose = () => <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+const IconLogout = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
 
 // --- Professional Chart Component ---
 const ChartComponent = ({ title, data, colors }: { title: string, data: { label: string, value: number }[], colors: string[] }) => {
@@ -23,7 +24,6 @@ const ChartComponent = ({ title, data, colors }: { title: string, data: { label:
       <div style={{ display: 'flex', height: '220px', position: 'relative', paddingLeft: '45px', paddingBottom: '35px' }}>
         <div style={{ position: 'absolute', left: -15, top: '50%', transform: 'rotate(-90deg)', fontSize: '13px', color: '#6b7280', fontWeight: 600 }}>Count</div>
         <div style={{ position: 'absolute', left: '45px', top: 0, bottom: '35px', width: '1px', background: '#e5e7eb' }}></div>
-        {/* Horizontal Guidelines */}
         <div style={{ position: 'absolute', left: '45px', right: 0, top: '0%', borderTop: '1px dashed #e5e7eb' }}></div>
         <div style={{ position: 'absolute', left: '45px', right: 0, top: '50%', borderTop: '1px dashed #e5e7eb' }}></div>
 
@@ -86,6 +86,8 @@ export default function Page() {
       setJobs(jobData);
       const appData = await getApplications();
       setApps(appData);
+    } catch(err) {
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -96,33 +98,75 @@ export default function Page() {
     else alert("Invalid Credentials");
   }
 
-  // Actions
+  const handleLogout = () => {
+    if(confirm("Are you sure you want to log out?")) {
+        setLogged(false);
+        setEmail("");
+        setPass("");
+    }
+  };
+
+  // --- Job Actions ---
   async function handleSaveJob() {
-    if (!jobForm.title || !jobForm.dept) return;
-    const dateStr = new Date().toLocaleDateString('en-GB');
-    if (editId === -1) await createJob(jobForm.title, jobForm.dept, jobForm.desc, dateStr);
-    else if (editId) await updateJob(editId, jobForm.title, jobForm.dept, jobForm.desc, jobForm.status);
-    await loadData();
-    setEditId(null);
+    if (!jobForm.title || !jobForm.dept) {
+        alert("Please fill in Job Title and Department.");
+        return;
+    }
+
+    try {
+        const dateStr = new Date().toLocaleDateString('en-GB');
+        if (editId === -1) {
+            await createJob(jobForm.title, jobForm.dept, jobForm.desc, dateStr);
+        } else if (editId !== null) {
+            await updateJob(editId, jobForm.title, jobForm.dept, jobForm.desc, jobForm.status);
+        }
+        await loadData();
+        setEditId(null);
+    } catch (error) {
+        console.error("Save failed:", error);
+        alert("Cannot save data. Please check actions.ts configuration.");
+    }
   }
+
+  // ฟังก์ชันใหม่: สลับสถานะ เปิด/ปิด รับสมัครงาน
+  async function handleToggleJobStatus(job: Job) {
+    const newStatus = job.status === "Open" ? "Closed" : "Open";
+    try {
+      await updateJob(job.id, job.title, job.dept, job.desc, newStatus);
+      await loadData();
+    } catch (error) {
+      alert("Error updating job status");
+    }
+  }
+
   async function handleDeleteJob(id: number) {
     if(confirm("Confirm deletion of this job posting?")) { await deleteJob(id); await loadData(); setViewId(null); }
   }
+  
   async function handleStatusChange(id: number, status: string) {
     await updateAppStatus(id, status);
     await loadData();
     setViewAppId(null); 
   }
+  
   async function handleDeleteApp(id: number) {
     if(confirm("Permanently delete this application?")) { await deleteApplication(id); await loadData(); setViewAppId(null); }
   }
+  
   async function handleCreateApp() {
-    if (!appForm.name || !appForm.job_title) return;
-    const dateStr = new Date().toLocaleDateString('en-GB');
-    await createApplication(appForm.name, appForm.email, appForm.job_title, dateStr);
-    await loadData();
-    setCreateAppModal(false);
-    setAppForm({ name: "", email: "", job_title: "" });
+    if (!appForm.name || !appForm.job_title) {
+        alert("Please fill in candidate name and applied position");
+        return;
+    }
+    try {
+        const dateStr = new Date().toLocaleDateString('en-GB');
+        await createApplication(appForm.name, appForm.email, appForm.job_title, dateStr);
+        await loadData();
+        setCreateAppModal(false);
+        setAppForm({ name: "", email: "", job_title: "" });
+    } catch (error) {
+        alert("Error saving candidate.");
+    }
   }
 
   // Helpers
@@ -138,7 +182,7 @@ export default function Page() {
   const jobStats = [
     { label: 'Total Jobs', value: jobs.length },
     { label: 'Active', value: jobs.filter(j=>j.status==="Open").length },
-    { label: 'Archived', value: jobs.filter(j=>j.status==="Archived").length },
+    { label: 'Closed', value: jobs.filter(j=>j.status==="Closed").length },
   ];
   const appStats = [
     { label: 'Pending', value: apps.filter(a=>a.status==="Pending").length },
@@ -160,106 +204,32 @@ export default function Page() {
     };
   });
 
-  // --- LOGIN SCREEN (UPSCALED) ---
+  // --- LOGIN SCREEN ---
   if (!logged) {
     return (
       <div className="login-screen" style={{
-        background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: "'Inter', sans-serif"
+        background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif"
       }}>
         <div className="login-card" style={{
-          background: 'white',
-          boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -10px rgba(0, 0, 0, 0.1)',
-          width: '550px',
-          padding: '80px 60px',
-          borderRadius: '24px',
-          textAlign: 'center'
+          background: 'white', boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -10px rgba(0, 0, 0, 0.1)', width: '550px', padding: '80px 60px', borderRadius: '24px', textAlign: 'center'
         }}>
           <div style={{marginBottom: '30px'}}>
              <div style={{width: 80, height: 80, background: '#1f2937', borderRadius: '16px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                 <span style={{color: 'white', fontWeight: 900, fontSize: '32px'}}>HR</span>
              </div>
           </div>
-          
-          <h2 style={{
-            marginBottom: '10px', 
-            fontSize: '36px', 
-            color: '#111827', 
-            fontWeight: 800, 
-            letterSpacing: '-0.03em'
-          }}>
-            Welcome Back
-          </h2>
+          <h2 style={{ marginBottom: '10px', fontSize: '36px', color: '#111827', fontWeight: 800, letterSpacing: '-0.03em' }}>Welcome Back</h2>
           <p style={{marginBottom: '50px', color: '#6b7280', fontSize: '18px'}}>Sign in to access the HR Portal</p>
           
           <div style={{marginBottom: '25px', textAlign: 'left'}}>
              <label style={{display: 'block', marginBottom: '10px', fontWeight: 600, color: '#374151', fontSize: '16px'}}>Username</label>
-             <input 
-                className="input-login" 
-                placeholder="Enter your username" 
-                value={email} 
-                onChange={e=>setEmail(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '18px 20px', 
-                  fontSize: '18px',
-                  borderRadius: '12px',
-                  border: '2px solid #e5e7eb',
-                  background: '#f9fafb',
-                  transition: 'all 0.2s',
-                  boxSizing: 'border-box'
-                }}
-              />
+             <input className="input-login" placeholder="Enter your username" value={email} onChange={e=>setEmail(e.target.value)} style={{ width: '100%', padding: '18px 20px', fontSize: '18px', borderRadius: '12px', border: '2px solid #e5e7eb', background: '#f9fafb', transition: 'all 0.2s', boxSizing: 'border-box' }}/>
           </div>
-          
           <div style={{marginBottom: '50px', textAlign: 'left'}}>
              <label style={{display: 'block', marginBottom: '10px', fontWeight: 600, color: '#374151', fontSize: '16px'}}>Password</label>
-             <input 
-                className="input-login" 
-                placeholder="Enter your password" 
-                type="password" 
-                value={pass} 
-                onChange={e=>setPass(e.target.value)} 
-                onKeyDown={e=>e.key==="Enter"&&handleLogin()}
-                style={{
-                  width: '100%',
-                  padding: '18px 20px', 
-                  fontSize: '18px',
-                  borderRadius: '12px',
-                  border: '2px solid #e5e7eb',
-                  background: '#f9fafb',
-                  transition: 'all 0.2s',
-                  boxSizing: 'border-box'
-                }}
-              />
+             <input className="input-login" placeholder="Enter your password" type="password" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogin()} style={{ width: '100%', padding: '18px 20px', fontSize: '18px', borderRadius: '12px', border: '2px solid #e5e7eb', background: '#f9fafb', transition: 'all 0.2s', boxSizing: 'border-box' }}/>
           </div>
-          
-          <button 
-            onClick={handleLogin}
-            style={{
-              width: '100%', 
-              padding: '20px', 
-              fontSize: '20px', 
-              fontWeight: 700, 
-              background: '#111827', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '12px', 
-              cursor: 'pointer',
-              transition: 'transform 0.1s',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            Sign In
-          </button>
-          
-          <p style={{marginTop: '30px', color: '#9ca3af', fontSize: '14px'}}>© 2026 Internal Job Board System</p>
+          <button onClick={handleLogin} style={{ width: '100%', padding: '20px', fontSize: '20px', fontWeight: 700, background: '#111827', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', transition: 'transform 0.1s', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>Sign In</button>
         </div>
       </div>
     );
@@ -269,15 +239,15 @@ export default function Page() {
   return (
     <div className="app">
       {/* SIDEBAR */}
-      <div className="sidebar" style={{background: '#111827', color: 'white', width: '280px'}}>
+      <div className="sidebar" style={{background: '#111827', color: 'white', width: '280px', display: 'flex', flexDirection: 'column'}}>
         <div className="profile" style={{borderBottom: '1px solid #374151', padding: '30px 20px', marginBottom: 20}}>
-          <img src="/image.png" className="profile-pic" alt="User" style={{width: 60, height: 60, border: '3px solid #4b5563'}} />
+          <img src="/Chaweewan.png" className="profile-pic" alt="User" style={{width: 60, height: 60, border: '3px solid #4b5563', borderRadius: '50%', objectFit: 'cover'}} />
           <div>
-            <div className="profile-name" style={{color: 'white', fontSize: '18px', fontWeight: 600}}>Gavano</div>
+            <div className="profile-name" style={{color: 'white', fontSize: '18px', fontWeight: 600}}>Chaweewan</div>
             <div className="profile-role" style={{color: '#9ca3af', fontSize: '14px'}}>HR Manager</div>
           </div>
         </div>
-        <div className="menu" style={{padding: '0 15px'}}>
+        <div className="menu" style={{padding: '0 15px', flex: 1}}>
           <div className={`menu-item-dark ${page==="jobs"?"active":""}`} onClick={()=>setPage("jobs")}><IconJobs /> Job Postings</div>
           <div className={`menu-item-dark ${page==="candidates"?"active":""}`} onClick={()=>setPage("candidates")}><IconUsers /> Candidates</div>
           <div className={`menu-item-dark ${page==="dashboard"?"active":""}`} onClick={()=>setPage("dashboard")}><IconDashboard /> Dashboard</div>
@@ -286,31 +256,20 @@ export default function Page() {
 
       {/* MAIN */}
       <div className="main" style={{background: '#f3f4f6'}}>
-        {/* ✅ FIXED: TOPBAR Layout for Left Alignment */}
-        <div className="topbar" style={{
-            background: 'white', 
-            borderBottom: '1px solid #e5e7eb', 
-            height: '80px', 
-            padding: '0 40px',
-            display: 'flex', // Important for layout
-            justifyContent: 'space-between', // Push content to edges
-            alignItems: 'center' // Vertically center
-        }}>
-          {/* Title on the LEFT */}
-          <h2 style={{
-              fontSize: 24, 
-              fontWeight: 700, 
-              color: '#111827', 
-              letterSpacing: '-0.01em',
-              margin: 0 // Remove default margin
-          }}>
+        {/* TOPBAR */}
+        <div className="topbar" style={{ background: 'white', borderBottom: '1px solid #e5e7eb', height: '80px', padding: '0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: '#111827', letterSpacing: '-0.01em', margin: 0 }}>
             {page === 'jobs' ? 'Job Management' : page === 'candidates' ? 'Applicant Tracking' : 'Executive Dashboard'}
           </h2>
           
-          {/* Action Buttons on the RIGHT */}
           <div style={{display:'flex', alignItems:'center', gap: '15px'}}>
              {page === "jobs" && <button className="btn-primary" onClick={openJobCreate}>+ New Job</button>}
              {page === "candidates" && <button className="btn-primary" onClick={()=>setCreateAppModal(true)}>+ Add Candidate</button>}
+             
+             <div style={{width: '1px', height: '30px', background: '#e5e7eb', margin: '0 10px'}}></div>
+             <button className="btn-outline btn-logout" onClick={handleLogout} style={{display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', color: '#ef4444', borderColor: '#fca5a5'}}>
+                <IconLogout /> Logout
+             </button>
           </div>
         </div>
 
@@ -319,10 +278,10 @@ export default function Page() {
           {/* JOBS PAGE */}
           {page === "jobs" && (
             <>
-              <div className="search-section" style={{padding: '20px', marginBottom: '30px'}}>
-                 <div style={{color:'#9ca3af'}}><IconSearch /></div>
-                 <input className="input" style={{border:'none', boxShadow:'none', fontSize: '16px'}} placeholder="Search by title or department..." value={searchInput} onChange={e => setSearchInput(e.target.value)}/>
-                 <button className="search-btn" onClick={() => setFilterKeyword(searchInput)}>Search</button>
+              <div className="search-section" style={{padding: '20px', marginBottom: '30px', display: 'flex', alignItems: 'center', background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb'}}>
+                 <div style={{color:'#9ca3af', marginLeft: '10px'}}><IconSearch /></div>
+                 <input className="input" style={{border:'none', boxShadow:'none', fontSize: '16px', flex: 1}} placeholder="Search by title or department..." value={searchInput} onChange={e => setSearchInput(e.target.value)}/>
+                 <button className="btn-primary" onClick={() => setFilterKeyword(searchInput)} style={{padding: '10px 20px'}}>Search</button>
               </div>
               <div className="card">
                 <table className="formal-table">
@@ -334,7 +293,9 @@ export default function Page() {
                         <td style={{fontSize: '15px'}}>{j.dept}</td>
                         <td><span className={`badge badge-${j.status}`}>{j.status}</span></td>
                         <td style={{fontSize: '15px'}}>{j.date}</td>
-                        <td><button className="btn-outline" onClick={() => setViewId(j.id)}>Details</button></td>
+                        <td>
+                            <button className="btn-outline" onClick={() => setViewId(j.id)}>Details</button>
+                        </td>
                       </tr>
                     ))}
                     {filteredJobs.length === 0 && <tr><td colSpan={5} style={{textAlign:'center', padding:40, color:'#6b7280', fontSize:'16px'}}>No jobs found.</td></tr>}
@@ -372,54 +333,13 @@ export default function Page() {
           {page === "dashboard" && (
             <div style={{display:'flex', flexDirection:'column', gap: '30px'}}>
               <div className="stats-grid">
-                <div className="stat-box" style={{borderLeft: '5px solid #3b82f6'}}>
-                   <div className="stat-label">Total Jobs</div>
-                   <div className="stat-num">{jobs.length}</div>
-                </div>
-                <div className="stat-box" style={{borderLeft: '5px solid #8b5cf6'}}>
-                   <div className="stat-label">Total Applicants</div>
-                   <div className="stat-num">{apps.length}</div>
-                </div>
-                <div className="stat-box" style={{borderLeft: '5px solid #10b981'}}>
-                   <div className="stat-label">Hired (Passed)</div>
-                   <div className="stat-num" style={{color:'#10b981'}}>{apps.filter(a=>a.status==='Passed').length}</div>
-                </div>
+                <div className="stat-box" style={{borderLeft: '5px solid #3b82f6'}}><div className="stat-label">Total Jobs</div><div className="stat-num">{jobs.length}</div></div>
+                <div className="stat-box" style={{borderLeft: '5px solid #8b5cf6'}}><div className="stat-label">Total Applicants</div><div className="stat-num">{apps.length}</div></div>
+                <div className="stat-box" style={{borderLeft: '5px solid #10b981'}}><div className="stat-label">Hired (Passed)</div><div className="stat-num" style={{color:'#10b981'}}>{apps.filter(a=>a.status==='Passed').length}</div></div>
               </div>
               <div style={{display:'flex', gap:'30px', flexWrap:'wrap'}}>
                 <ChartComponent title="Job Status Overview" data={jobStats} colors={['#3b82f6', '#10b981', '#6b7280']} />
                 <ChartComponent title="Recruitment Pipeline" data={appStats} colors={['#9ca3af', '#10b981', '#ef4444']} />
-              </div>
-              <div className="card" style={{boxShadow: 'none', border: '1px solid #e5e7eb'}}>
-                <div style={{padding: '20px 25px', borderBottom: '1px solid #e5e7eb', background: '#f9fafb'}}>
-                    <h3 style={{margin:0, fontSize: 18, color: '#111827', fontWeight: 700}}>Recruitment Summary by Position</h3>
-                </div>
-                <table className="formal-table">
-                  <thead>
-                    <tr style={{background: 'white'}}>
-                        <th>Job Position</th>
-                        <th>Department</th>
-                        <th style={{textAlign:'center'}}>Total Candidates</th>
-                        <th style={{textAlign:'center', color:'#f59e0b'}}>Pending</th>
-                        <th style={{textAlign:'center', color:'#10b981'}}>Passed</th>
-                        <th style={{textAlign:'center', color:'#ef4444'}}>Failed</th>
-                        <th style={{textAlign:'center'}}>Job Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recruitmentStats.map(stat => (
-                        <tr key={stat.id}>
-                            <td style={{fontWeight:600, fontSize: '15px'}}>{stat.title}</td>
-                            <td style={{fontSize: '15px'}}>{stat.dept}</td>
-                            <td style={{textAlign:'center', fontWeight:'bold', fontSize: '16px'}}>{stat.total}</td>
-                            <td style={{textAlign:'center', fontSize: '15px'}}>{stat.pending > 0 ? stat.pending : '-'}</td>
-                            <td style={{textAlign:'center', fontSize: '15px'}}>{stat.passed > 0 ? stat.passed : '-'}</td>
-                            <td style={{textAlign:'center', fontSize: '15px'}}>{stat.failed > 0 ? stat.failed : '-'}</td>
-                            <td style={{textAlign:'center'}}><span className={`badge badge-${stat.status}`} style={{fontSize:12}}>{stat.status}</span></td>
-                        </tr>
-                    ))}
-                    {recruitmentStats.length === 0 && <tr><td colSpan={7} style={{textAlign:'center', padding:40, fontSize:'15px'}}>No data available.</td></tr>}
-                  </tbody>
-                </table>
               </div>
             </div>
           )}
@@ -441,11 +361,25 @@ export default function Page() {
             <div style={{background:'#f3f4f6', padding:25, borderRadius:8, marginBottom:30, fontSize:16, lineHeight:1.7, color: '#374151'}}>
                 {viewJob.desc}
             </div>
+            
+            {/* พื้นที่จัดการปุ่ม Action ใน Modal */}
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                <span className={`badge badge-${viewJob.status}`} style={{fontSize:14, padding:'8px 16px'}}>{viewJob.status}</span>
+                <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                    <span className={`badge badge-${viewJob.status}`} style={{fontSize:14, padding:'8px 16px'}}>{viewJob.status}</span>
+                    
+                    {/* ปุ่มสำหรับ Toggle เปิด-ปิด รับสมัครงาน */}
+                    <button 
+                        className={viewJob.status === "Open" ? "btn-outline" : "btn-primary"} 
+                        onClick={() => handleToggleJobStatus(viewJob)}
+                        style={{padding: '8px 16px', fontSize: '14px'}}
+                    >
+                        {viewJob.status === "Open" ? "Close Job (ปิดรับสมัคร)" : "Re-open Job (เปิดรับสมัครอีกครั้ง)"}
+                    </button>
+                </div>
+
                 <div className="modal-actions" style={{margin:0}}>
                     <button className="btn-outline" onClick={openJobEdit.bind(null, viewJob)} style={{padding: '10px 20px', fontSize: '15px'}}>Edit Posting</button>
-                    <button className="btn-danger-outline" onClick={()=>handleDeleteJob(viewJob.id)} style={{padding: '10px 20px', fontSize: '15px'}}>Delete</button>
+                    <button className="btn-danger-outline" onClick={()=>handleDeleteJob(viewJob.id)} style={{padding: '10px 20px', fontSize: '15px', marginLeft: '10px'}}>Delete</button>
                 </div>
             </div>
           </div>
@@ -467,6 +401,23 @@ export default function Page() {
                 <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#374151'}}>Department</label>
                 <input className="input-large" value={jobForm.dept} onChange={e=>setJobForm({...jobForm, dept:e.target.value})} placeholder="e.g. Marketing"/>
               </div>
+              
+              {/* เพิ่มส่วนเลือก Status ในหน้าแก้ไขงาน */}
+              {editId !== -1 && (
+                <div>
+                  <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#374151'}}>Job Status</label>
+                  <select 
+                    className="input-large" 
+                    value={jobForm.status} 
+                    onChange={e=>setJobForm({...jobForm, status:e.target.value})}
+                  >
+                      <option value="Open">Open (เปิดรับสมัคร)</option>
+                      <option value="Closed">Closed (ปิดรับสมัคร)</option>
+                      <option value="Archived">Archived (เก็บเข้าคลัง)</option>
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label style={{display: 'block', marginBottom: 8, fontWeight: 600, color: '#374151'}}>Description</label>
                 <textarea className="textarea-large" rows={6} value={jobForm.desc} onChange={e=>setJobForm({...jobForm, desc:e.target.value})} placeholder="Enter job description..."/>
@@ -477,7 +428,7 @@ export default function Page() {
         </div>
       )}
 
-      {/* NEW: CREATE CANDIDATE MODAL */}
+      {/* CREATE CANDIDATE MODAL */}
       {createAppModal && (
         <div className="modal-overlay" onClick={()=>setCreateAppModal(false)}>
           <div className="modal-content" onClick={e=>e.stopPropagation()} style={{padding: '40px', maxWidth: '500px'}}>
@@ -535,12 +486,17 @@ export default function Page() {
         </div>
       )}
 
-      {/* Global Styles for Professional Look */}
+      {/* Global Styles */}
       <style jsx global>{`
-        body { background: #f3f4f6; color: #1f2937; font-family: 'Inter', system-ui, sans-serif; }
-        .input, .textarea { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px 16px; font-size: 15px; width: 100%; transition: all 0.2s; background: white; }
-        .input-large, .textarea-large { border: 1px solid #d1d5db; border-radius: 8px; padding: 14px 18px; font-size: 16px; width: 100%; transition: all 0.2s; background: white; }
-        .input:focus, .textarea:focus, .input-large:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        body { background: #f3f4f6; color: #1f2937; margin: 0; padding: 0; }
+        .app { display: flex; min-height: 100vh; }
+        .sidebar { flex-shrink: 0; }
+        .main { flex-grow: 1; display: flex; flexDirection: column; width: calc(100% - 280px); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); overflow: hidden; }
+        
+        .input, .textarea, select { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px 16px; font-size: 15px; width: 100%; transition: all 0.2s; background: white; box-sizing: border-box;}
+        .input-large, .textarea-large { border: 1px solid #d1d5db; border-radius: 8px; padding: 14px 18px; font-size: 16px; width: 100%; transition: all 0.2s; background: white; box-sizing: border-box;}
+        .input:focus, .textarea:focus, .input-large:focus, select:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
         .input-login:focus { border-color: #111827 !important; box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.1) !important; }
         
         .btn-primary { background: #111827; color: white; border: none; border-radius: 8px; padding: 12px 24px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
@@ -549,6 +505,7 @@ export default function Page() {
         
         .btn-outline { background: white; border: 1px solid #d1d5db; color: #374151; border-radius: 6px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-outline:hover { background: #f9fafb; border-color: #9ca3af; color: #111827; }
+        .btn-logout:hover { background: #fef2f2 !important; border-color: #ef4444 !important; }
 
         .btn-danger-outline { background: white; border: 1px solid #fca5a5; color: #dc2626; border-radius: 6px; padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
         .btn-danger-outline:hover { background: #fef2f2; border-color: #f87171; }
@@ -572,13 +529,16 @@ export default function Page() {
         .badge-Archived { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
         .badge-Pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 
+        .stats-grid { display: flex; gap: 30px; margin-bottom: 30px; }
         .stat-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb; flex: 1; transition: transform 0.2s; }
         .stat-box:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
         .stat-label { font-size: 14px; color: #6b7280; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
         .stat-num { font-size: 36px; font-weight: 800; color: #111827; line-height: 1; }
         
-        .modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); }
-        .modal-content { border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 50; }
+        .modal-content { background: white; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); position: relative; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .close-icon { position: absolute; top: 20px; right: 20px; cursor: pointer; transition: 0.2s; }
+        .close-icon:hover { transform: scale(1.1); }
       `}</style>
     </div>
   );
