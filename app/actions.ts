@@ -1,87 +1,95 @@
-"use server";
+"use server"
 
-export type Job = {
-  id: number;
-  title: string;
-  dept: string;
-  desc: string;
-  status: string;
-  date: string;
-};
+import { prisma } from "../lib/prisma"
+import { revalidatePath } from "next/cache"
 
-export type Application = {
-  id: number;
-  name: string;
-  email: string;
-  job_title: string;
-  status: string;
-  date: string;
-};
+// 1. ดึงข้อมูลและแปลง Date เป็น String
+export async function getData() {
+  const jobsRaw = await prisma.job.findMany({ orderBy: { id: 'desc' } });
+  const appsRaw = await prisma.application.findMany({ orderBy: { id: 'desc' } });
 
-// ใช้ Global Variables จำลอง Database ชั่วคราว
-let jobs: Job[] = [
-  { id: 1, title: "Software Engineer", dept: "IT", desc: "Develop internal tools", status: "Open", date: "28/02/2026" },
-  { id: 2, title: "Marketing Manager", dept: "Marketing", desc: "Manage campaigns", status: "Closed", date: "25/02/2026" }
-];
+  // แปลงข้อมูล Job
+  const jobs = jobsRaw.map(job => ({
+    ...job,
+    // แปลง Date Object เป็น String (เช่น "2023-12-25")
+    date: job.date.toISOString().split('T')[0], 
+    // ถ้า openDate/closingDate เป็น String อยู่แล้วก็ไม่ต้องทำอะไร
+  }));
 
-let applications: Application[] = [
-  { id: 1, name: "Somchai Jaidee", email: "somchai@email.com", job_title: "Software Engineer", status: "Pending", date: "28/02/2026" }
-];
+  // แปลงข้อมูล Application
+  const apps = appsRaw.map(app => ({
+    ...app,
+    date: app.date.toISOString().split('T')[0],
+  }));
 
-// --- Job Actions ---
-export async function getJobs() {
-  return jobs;
+  return { jobs, apps };
 }
 
-export async function createJob(title: string, dept: string, desc: string, date: string) {
-  const newJob: Job = {
-    id: Date.now(), // สร้าง ID อัตโนมัติ
-    title,
-    dept,
-    desc,
-    status: "Open",
-    date
-  };
-  jobs.push(newJob);
-  return newJob;
-}
+// 2. บันทึกหรือแก้ไขงาน
+export async function saveJobAction(id: number | null, data: any, creator: string) {
+  // ลบ id ออกจาก data ก่อนส่งไป create/update เพื่อป้องกัน error
+  const { id: _, ...jobData } = data;
 
-export async function updateJob(id: number, title: string, dept: string, desc: string, status: string) {
-  const index = jobs.findIndex(j => j.id === id);
-  if (index > -1) {
-    jobs[index] = { ...jobs[index], title, dept, desc, status };
+  if (id === -1 || id === null) {
+    // สร้างใหม่
+    await prisma.job.create({
+      data: {
+        title: jobData.title,
+        dept: jobData.dept,
+        desc: jobData.desc,
+        requirements: jobData.requirements,
+        status: jobData.status,
+        openDate: jobData.openDate,
+        closingDate: jobData.closingDate,
+        creator: creator
+      }
+    });
+  } else {
+    // แก้ไข
+    await prisma.job.update({
+      where: { id },
+      data: {
+        title: jobData.title,
+        dept: jobData.dept,
+        desc: jobData.desc,
+        requirements: jobData.requirements,
+        status: jobData.status,
+        openDate: jobData.openDate,
+        closingDate: jobData.closingDate,
+      }
+    });
   }
+  revalidatePath('/');
 }
 
-export async function deleteJob(id: number) {
-  jobs = jobs.filter(j => j.id !== id);
+// 3. ลบงาน
+export async function deleteJobAction(id: number) {
+  await prisma.job.delete({ where: { id } });
+  revalidatePath('/');
 }
 
-// --- Application Actions ---
-export async function getApplications() {
-  return applications;
+// 4. สมัครงาน (เพิ่มส่วนนี้เพื่อให้ปุ่ม Apply ทำงานได้)
+export async function applyJobAction(jobData: any, appData: any, currentUser: string) {
+  await prisma.application.create({
+    data: {
+      jobId: jobData.id,
+      jobTitle: jobData.title,
+      applicant: currentUser,
+      email: `${currentUser}@mail.com`, // หรือรับจาก Form
+      phone: appData.phone || "099-999-9999",
+      resume: appData.resumeLink,
+      reason: appData.reason || "",
+      creatorOfJob: jobData.creator
+    }
+  });
+  revalidatePath('/');
 }
 
-export async function createApplication(name: string, email: string, job_title: string, date: string) {
-  const newApp: Application = {
-    id: Date.now(),
-    name,
-    email,
-    job_title,
-    status: "Pending",
-    date
-  };
-  applications.push(newApp);
-  return newApp;
-}
-
-export async function updateAppStatus(id: number, status: string) {
-  const index = applications.findIndex(a => a.id === id);
-  if (index > -1) {
-    applications[index].status = status;
-  }
-}
-
-export async function deleteApplication(id: number) {
-  applications = applications.filter(a => a.id !== id);
+// 5. อัปเดตสถานะผู้สมัคร
+export async function updateAppStatusAction(id: number, status: string) {
+  await prisma.application.update({
+    where: { id },
+    data: { status }
+  });
+  revalidatePath('/');
 }
