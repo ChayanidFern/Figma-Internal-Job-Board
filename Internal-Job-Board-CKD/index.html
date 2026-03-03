@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Job Board</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-title">Internal Job Board CKD</div>
+    <input class="input" id="loginEmail" placeholder="Email">
+    <input class="input" id="loginPass" placeholder="Password" type="password">
+    <button class="btn-primary" id="loginBtn">Login</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+
+<div class="sidebar">
+  <div class="profile">
+    <img src="Chaweewan.png.png" class="profile-pic">
+    <div>
+      <div class="profile-name">Chaweewan</div>
+      <div class="profile-role">HR</div>
+    </div>
+  </div>
+
+  <div class="menu">
+    <div class="menu-item active" data-page="jobs">Jobs</div>
+    <div class="menu-item" data-page="dashboard">Dashboard</div>
+  </div>
+</div>
+
+<div class="main">
+
+<div class="topbar">
+  <button class="btn-create" id="createBtn">+ Create Job</button>
+  <div>🔔</div>
+</div>
+
+<div class="content">
+
+<!-- JOB LIST -->
+<div id="jobsPage">
+  <div class="search-row">
+    <div class="search-box">
+      <input id="searchInput" placeholder="Search job title">
+      <button id="searchBtn">Search</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Job Title</th>
+          <th>Department</th>
+          <th>Status</th>
+          <th>Action</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="jobTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboardPage" style="display:none">
+  <div class="stats">
+    <div class="stat"><h3>Total</h3><p id="statTotal">0</p></div>
+    <div class="stat"><h3>Open</h3><p id="statOpen">0</p></div>
+    <div class="stat"><h3>Archived</h3><p id="statClosed">0</p></div>
+  </div>
+</div>
+
+<!-- VIEW -->
+<div id="viewPage" style="display:none">
+  <div class="card">
+    <div class="section-title" id="viewTitle"></div>
+    <div id="viewBody"></div>
+
+    <div class="action-row">
+      <button class="btn-blue" id="editBtn">Edit</button>
+      <button class="btn-red" id="archiveBtn">Archive</button>
+      <button class="btn-danger" id="deleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE -->
+<div id="createPage" style="display:none">
+  <div class="card">
+    <div class="section-title">Create / Edit Job</div>
+    <input id="newTitle" class="input" placeholder="Job Title">
+    <input id="newDept" class="input" placeholder="Department">
+    <textarea id="newDesc" class="textarea"></textarea>
+    <button class="btn-blue" id="saveJobBtn">Save Job</button>
+  </div>
+</div>
+
+</div>
+</div>
+</div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
