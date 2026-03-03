@@ -1,0 +1,16 @@
+import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg' // 1. เปลี่ยนชื่อ import
+import { Pool } from 'pg'
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient }
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool) // 2. แก้ตรงนี้ด้วย
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    adapter,
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

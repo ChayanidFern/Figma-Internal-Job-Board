@@ -10,6 +10,9 @@ import Dashboard from "../components/Dashboard";
 import ApplicantList from "../components/ApplicantList";
 import JobManagement from "../components/JobManagement";
 
+// นำเข้า Actions ที่สร้างไว้
+import { getData, saveJobAction, deleteJobAction, updateAppStatusAction } from "./actions";
+
 export default function Page() {
   const [logged, setLogged] = useState(false);
   const [currentUser, setCurrentUser] = useState("");
@@ -31,27 +34,20 @@ export default function Page() {
   });
   const [applyForm, setApplyForm] = useState({ reason: "", resumeLink: "" });
 
+  // ดึงข้อมูลจริงจาก DB เมื่อ Login สำเร็จ
   useEffect(() => {
     if (logged) {
-      setProfile(prev => ({ ...prev, name: currentUser }));
-      setJobs([
-        { 
-          id: 1, title: "Frontend Developer", dept: "IT", desc: "React Dev", 
-          requirements: "2 Years Exp\nReact\nTypeScript", responsibilities: "UI/UX", 
-          status: "Open", date: "01/03/2026", openDate: "01/03/2026", 
-          closingDate: "30/03/2026", creator: "Admin" 
-        },
-        { 
-          id: 2, title: "Marketing", dept: "Marketing", desc: "Ads Manager", 
-          requirements: "Creative\nMarketing Tools", responsibilities: "Budgeting", 
-          status: "Open", date: "02/03/2026", openDate: "02/03/2026", 
-          closingDate: "15/03/2026", creator: currentUser 
-        },
-      ]);
-      setApps([
-        { id: 1, jobId: 1, jobTitle: "Frontend Developer", applicant: currentUser, email: `${currentUser}@mail.com`, phone: "080", resume: "link", reason: "Want code", status: "Pending", date: "03/03/2026", creatorOfJob: "Admin" },
-        { id: 2, jobId: 2, jobTitle: "Marketing", applicant: "Somchai", email: "somchai@mail.com", phone: "099", resume: "link", reason: "Likes Ads", status: "Pending", date: "03/03/2026", creatorOfJob: currentUser }
-      ]);
+      const fetchDB = async () => {
+        try {
+          const { jobs, apps } = await getData();
+          setJobs(jobs as any);
+          setApps(apps as any);
+          setProfile(prev => ({ ...prev, name: currentUser }));
+        } catch (error) {
+          showToast("Failed to fetch data", "error");
+        }
+      };
+      fetchDB();
     }
   }, [logged, currentUser]);
 
@@ -60,11 +56,18 @@ export default function Page() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleUpdateAppStatus = (id: number, status: string) => {
-    setApps(apps.map(a => a.id === id ? { ...a, status } : a));
-    showToast(`Status updated to ${status}`);
+  // อัปเดตสถานะผู้สมัครลง DB
+  const handleUpdateAppStatus = async (id: number, status: string) => {
+    try {
+      await updateAppStatusAction(id, status);
+      setApps(apps.map(a => a.id === id ? { ...a, status } : a));
+      showToast(`Status updated to ${status}`);
+    } catch (error) {
+      showToast("Update failed", "error");
+    }
   };
 
+  // ลบข้อมูลผู้สมัคร (Mock-up logic สำหรับใบสมัคร)
   const handleDeleteApplication = (id: number) => {
     if (confirm("ยืนยันว่าลบจริงๆใช่ไหม? ลบแล้วไม่สามารถกู้คืนได้นะ")) {
       setApps(apps.filter(a => a.id !== id));
@@ -72,26 +75,35 @@ export default function Page() {
     }
   };
 
-  const handleDeleteJob = (id: number) => {
-    if (confirm("ยืนยันว่าลบจริงๆใช่ไหม? ลบแล้วไม่สามารถกู้คืนได้นะ")) {
-      if (confirm("⚠️ ย้ำอีกครั้ง: ลบถาวรใช่หรือไม่?")) {
+  // ลบงานจาก DB
+  const handleDeleteJob = async (id: number) => {
+    if (confirm("ยืนยันการลบจริงๆใช่ไหม?")) {
+      try {
+        await deleteJobAction(id);
         setJobs(jobs.filter(j => j.id !== id));
         setApps(apps.filter(a => a.jobId !== id));
         showToast("ลบงานเรียบร้อยแล้ว", "error");
+      } catch (error) {
+        showToast("Delete failed", "error");
       }
     }
   };
 
-  const handleSaveJob = () => {
+  // บันทึกหรือแก้ไขงานลง DB
+  const handleSaveJob = async () => {
     if (!jobForm.title) { showToast("Title required", "error"); return; }
-    if (editJobId === -1) {
-      setJobs([{ id: Date.now(), ...jobForm, date: "03/03/2026", creator: currentUser }, ...jobs]);
-      showToast("Job Created");
-    } else {
-      setJobs(jobs.map(j => j.id === editJobId ? { ...j, ...jobForm } : j));
-      showToast("Job Updated");
+    try {
+      await saveJobAction(editJobId, jobForm, currentUser);
+      
+      // ดึงข้อมูลล่าสุดหลังบันทึก
+      const { jobs: updatedJobs } = await getData();
+      setJobs(updatedJobs as any);
+      
+      showToast(editJobId === -1 ? "Job Created" : "Job Updated");
+      setEditJobId(null);
+    } catch (error) {
+      showToast("Save failed", "error");
     }
-    setEditJobId(null);
   };
 
   const handleApply = () => {
@@ -170,7 +182,7 @@ export default function Page() {
                 <div>
                   <h4 style={{ marginBottom: '12px' }}>Qualifications:</h4>
                   <ul style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
-                    {j.requirements.split('\n').map((item, idx) => <li key={idx}>{item}</li>)}
+                    {j.requirements?.split('\n').map((item, idx) => <li key={idx}>{item}</li>)}
                   </ul>
                 </div>
                 <div style={{ marginTop: '40px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

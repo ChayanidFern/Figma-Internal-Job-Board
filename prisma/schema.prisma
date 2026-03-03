@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+
+}
+
+model Job {
+  id               Int           @id @default(autoincrement())
+  title            String
+  dept             String
+  desc             String
+  requirements     String?       @default("")
+  responsibilities String?       @default("")
+  status           String        @default("Open")
+  date             DateTime      @default(now())
+  openDate         String?
+  closingDate      String?
+  creator          String
+  applications     Application[]
+}
+
+model Application {
+  id           Int      @id @default(autoincrement())
+  jobId        Int
+  jobTitle     String
+  applicant    String
+  email        String
+  phone        String?
+  resume       String
+  reason       String?
+  status       String   @default("Pending")
+  date         DateTime @default(now())
+  creatorOfJob String
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
