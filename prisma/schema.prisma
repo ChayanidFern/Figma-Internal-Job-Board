@@ -7,6 +7,23 @@ datasource db {
 
 }
 
+// ... (code เดิมด้านบน)
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  password    String   @default("1234") // รหัสเริ่มต้น
+  name        String?
+  email       String?
+  phone       String?
+  department  String?
+  position    String?
+  education   String?  // เก็บเป็น Text ยาว
+  experience  String?  // เก็บเป็น Text ยาว
+  skills      String?
+  image       String?
+}
+
 model Job {
   id               Int           @id @default(autoincrement())
   title            String
@@ -36,3 +53,4 @@ model Application {
   creatorOfJob String
   job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
+

@@ -1,12 +1,53 @@
-import { defineConfig } from '@prisma/config';
-import { config } from 'dotenv';
+generator client {
+  provider = "prisma-client-js"
+}
 
-// โหลดไฟล์ .env ทันที
-config();
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
-export default defineConfig({
-  datasource: {
-    // ตอนนี้ process.env.DATABASE_URL จะมีค่าแล้ว
-    url: process.env.DATABASE_URL ?? "", 
-  },
-});
+model Job {
+  id               Int           @id @default(autoincrement())
+  title            String
+  dept             String
+  desc             String
+  requirements     String?       @default("")
+  responsibilities String?       @default("")
+  status           String        @default("Open")
+  date             DateTime      @default(now())
+  openDate         String?
+  closingDate      String?
+  creator          String
+  applications     Application[]
+}
+
+model Application {
+  id           Int      @id @default(autoincrement())
+  jobId        Int
+  jobTitle     String
+  applicant    String
+  email        String
+  phone        String?
+  resume       String
+  reason       String?
+  status       String   @default("Pending")
+  date         DateTime @default(now())
+  creatorOfJob String
+  job          Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id          Int     @id @default(autoincrement())
+  username    String  @unique
+  password    String  @default("123")
+  name        String?
+  email       String?
+  phone       String?
+  department  String?
+  position    String?
+  education   String?
+  experience  String?
+  skills      String?
+  image       String?
+}

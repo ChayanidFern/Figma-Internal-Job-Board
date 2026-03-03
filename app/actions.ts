@@ -3,93 +3,77 @@
 import { prisma } from "../lib/prisma"
 import { revalidatePath } from "next/cache"
 
-// 1. ดึงข้อมูลและแปลง Date เป็น String
+// 1. ดึงข้อมูลงานและใบสมัครทั้งหมด
 export async function getData() {
   const jobsRaw = await prisma.job.findMany({ orderBy: { id: 'desc' } });
   const appsRaw = await prisma.application.findMany({ orderBy: { id: 'desc' } });
-
-  // แปลงข้อมูล Job
-  const jobs = jobsRaw.map(job => ({
-    ...job,
-    // แปลง Date Object เป็น String (เช่น "2023-12-25")
-    date: job.date.toISOString().split('T')[0], 
-    // ถ้า openDate/closingDate เป็น String อยู่แล้วก็ไม่ต้องทำอะไร
-  }));
-
-  // แปลงข้อมูล Application
-  const apps = appsRaw.map(app => ({
-    ...app,
-    date: app.date.toISOString().split('T')[0],
-  }));
-
-  return { jobs, apps };
+  return {
+    jobs: jobsRaw.map(j => ({ ...j, date: j.date.toISOString().split('T')[0] })),
+    apps: appsRaw.map(a => ({ ...a, date: a.date.toISOString().split('T')[0] }))
+  };
 }
 
-// 2. บันทึกหรือแก้ไขงาน
-export async function saveJobAction(id: number | null, data: any, creator: string) {
-  // ลบ id ออกจาก data ก่อนส่งไป create/update เพื่อป้องกัน error
-  const { id: _, ...jobData } = data;
-
-  if (id === -1 || id === null) {
-    // สร้างใหม่
-    await prisma.job.create({
-      data: {
-        title: jobData.title,
-        dept: jobData.dept,
-        desc: jobData.desc,
-        requirements: jobData.requirements,
-        status: jobData.status,
-        openDate: jobData.openDate,
-        closingDate: jobData.closingDate,
-        creator: creator
-      }
-    });
-  } else {
-    // แก้ไข
-    await prisma.job.update({
-      where: { id },
-      data: {
-        title: jobData.title,
-        dept: jobData.dept,
-        desc: jobData.desc,
-        requirements: jobData.requirements,
-        status: jobData.status,
-        openDate: jobData.openDate,
-        closingDate: jobData.closingDate,
-      }
+// 2. จัดการ Profile และ Sidebar Sync ทันที
+export async function getUserProfile(username: string) {
+  let user = await prisma.user.findUnique({ where: { username } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: { username, name: username, email: `${username}@org.com`, password: "123", position: "Software Engineer" }
     });
   }
-  revalidatePath('/');
+  return user;
 }
 
-// 3. ลบงาน
-export async function deleteJobAction(id: number) {
-  await prisma.job.delete({ where: { id } });
-  revalidatePath('/');
+export async function updateUserProfile(username: string, data: any) {
+  await prisma.user.update({
+    where: { username },
+    data: {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      department: data.department,
+      position: data.position, // สำหรับแสดงผลที่ Sidebar
+      image: data.image,
+      education: data.education,
+      experience: data.experience,
+      skills: data.skills,
+      resume: data.resume 
+    }
+  });
+  revalidatePath('/'); // อัปเดต Sidebar และหน้าจอทุกจุดทันที
 }
 
-// 4. สมัครงาน (เพิ่มส่วนนี้เพื่อให้ปุ่ม Apply ทำงานได้)
-export async function applyJobAction(jobData: any, appData: any, currentUser: string) {
+// 3. ส่งใบสมัครจากหน้าโปรไฟล์ไปหน้า Applicant
+export async function createApplicationFromProfile(username: string, jobTitle: string, profileData: any) {
+  const job = await prisma.job.findFirst({ where: { title: jobTitle } });
   await prisma.application.create({
     data: {
-      jobId: jobData.id,
-      jobTitle: jobData.title,
-      applicant: currentUser,
-      email: `${currentUser}@mail.com`, // หรือรับจาก Form
-      phone: appData.phone || "099-999-9999",
-      resume: appData.resumeLink,
-      reason: appData.reason || "",
-      creatorOfJob: jobData.creator
+      jobId: job?.id || 0,
+      jobTitle: jobTitle,
+      applicant: profileData.name || username,
+      email: profileData.email || "",
+      phone: profileData.phone || "",
+      resume: profileData.resume || "",
+      reason: "Applied via Profile Page",
+      creatorOfJob: job?.creator || "Admin",
+      status: "Pending"
     }
   });
   revalidatePath('/');
 }
 
-// 5. อัปเดตสถานะผู้สมัคร
+// 4. ฟังก์ชันจัดการอื่นๆ
 export async function updateAppStatusAction(id: number, status: string) {
-  await prisma.application.update({
-    where: { id },
-    data: { status }
-  });
+  await prisma.application.update({ where: { id: Number(id) }, data: { status } });
+  revalidatePath('/');
+}
+
+export async function deleteApplicationAction(id: number) {
+  await prisma.application.delete({ where: { id: Number(id) } });
+  revalidatePath('/');
+}
+
+export async function deleteJobAction(id: number) {
+  await prisma.job.delete({ where: { id: Number(id) } });
   revalidatePath('/');
 }
