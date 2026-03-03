@@ -4,14 +4,16 @@ import React, { useState } from 'react';
 import { IconSearch, IconTrash, IconBack } from "./icons";
 import { Job } from "../types";
 
+// 1. เพิ่ม onAddJob เข้าไปใน Interface
 interface JobManagementProps {
   jobs: Job[];
   currentUser: string;
   onViewJob: (id: number) => void;
   onDeleteJob: (id: number) => void;
+  onAddJob: () => void; // <--- เพิ่มตรงนี้
 }
 
-export default function JobManagement({ jobs, currentUser, onViewJob, onDeleteJob }: JobManagementProps) {
+export default function JobManagement({ jobs, currentUser, onViewJob, onDeleteJob, onAddJob }: JobManagementProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredJobs = jobs.filter(job =>
@@ -24,26 +26,61 @@ export default function JobManagement({ jobs, currentUser, onViewJob, onDeleteJo
   return (
     <div style={{ padding: '20px' }}>
       
-      {/* ส่วน Search Bar */}
-      <div style={{ marginBottom: '20px', background: 'white', padding: '15px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ position: 'relative' }}>
+      {/* 2. ปรับส่วน Header: Search Bar + ปุ่ม Create Job */}
+      <div style={{ 
+        marginBottom: '20px', 
+        background: 'white', 
+        padding: '20px 30px', // ปรับ Padding ให้สมดุลขึ้น
+        borderRadius: '16px', // ปรับความมนให้เข้ากับ Card ด้านล่าง
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        display: 'flex',      // ใช้ Flex เพื่อจัดเรียงแนวนอน
+        alignItems: 'center', // จัดกึ่งกลางแนวตั้ง
+        gap: '20px'           // เว้นระยะห่างระหว่าง Search กับปุ่ม
+      }}>
+        
+        {/* กล่อง Search (ให้ยืดเต็มพื้นที่ที่เหลือ) */}
+        <div style={{ position: 'relative', flex: 1 }}>
           <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }}>
             <IconSearch />
           </span>
           <input 
             style={{ 
-              width: '100%', 
+              width: '96%', // เปลี่ยนเป็น 100% ของ Container แม่
               padding: '12px 12px 12px 42px', 
               border: '1px solid #e5e7eb', 
               borderRadius: '8px', 
               fontSize: '14px',
-              outline: 'none'
+              outline: 'none',
+              background: '#f9fafb' // เพิ่มสีพื้นหลัง input นิดหน่อGย
             }}
             placeholder="Search job title or department..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {/* 3. ปุ่ม Create Job */}
+        <button 
+          onClick={onAddJob}
+          style={{
+            backgroundColor: '#2563eb',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            whiteSpace: 'nowrap', // ห้ามตัดคำ
+            boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
+          }}
+        >
+          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>+</span> Create Job
+        </button>
+
       </div>
 
       {/* ตารางข้อมูลงาน */}

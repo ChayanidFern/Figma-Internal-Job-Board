@@ -4,24 +4,25 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-
+  url      = env("DATABASE_URL")
 }
 
-// ... (code เดิมด้านบน)
-
+ 
 model User {
   id          Int      @id @default(autoincrement())
   username    String   @unique
-  password    String   @default("1234") // รหัสเริ่มต้น
+  password    String   @default("1234")
   name        String?
   email       String?
   phone       String?
   department  String?
   position    String?
-  education   String?  // เก็บเป็น Text ยาว
-  experience  String?  // เก็บเป็น Text ยาว
+  education   String?
+  experience  String?
   skills      String?
   image       String?
+  resume      String?
+  resumeName  String?
 }
 
 model Job {
