@@ -143,15 +143,28 @@ export async function createJob(data: any, currentUser: string) {
         desc: data.desc,
         requirements: data.requirements || "",
         responsibilities: data.responsibilities || "",
-        status: "Open",
+        status: data.status || "Open", // <--- รับค่า status ตรงนี้
         creator: currentUser,
-        // date: จะถูกสร้างโดยอัตโนมัติจาก @default(now()) ใน schema
       }
     });
-    revalidatePath('/'); // เพิ่ม revalidate เพื่อให้หน้าจอแสดงงานใหม่ทันที
+    revalidatePath('/');
     return { success: true, job: newJob };
   } catch (error) {
     console.error("Create job error:", error);
     return { success: false, error: "Failed to create job" };
+  }
+}
+
+//ubdate status
+export async function updateJobStatus(jobId: number, status: string) {
+  try {
+    await prisma.job.update({
+      where: { id: Number(jobId) },
+      data: { status }
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update status" };
   }
 }

@@ -61,7 +61,8 @@ export default function ApplicantList({ apps, onUpdateStatus, onDelete }: Applic
                     color: '#c2410c',
                     fontSize: '13px',
                     fontWeight: 500,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: '120px'
                   }}
                 >
                   <option value="Pending">🕒 Pending</option>

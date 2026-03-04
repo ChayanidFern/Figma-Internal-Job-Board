@@ -86,8 +86,8 @@ export default function ProfilePage({ currentUser }: { currentUser: string }) {
   const inputStyle = { background: '#f8fafc', width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: 24, fontWeight: 700 }}>Profile</h1>
+    <div style={{ maxWidth: '1000px', margin: '0 auto'}}>
+      
       <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: '30px' }}>
         <button onClick={() => setActiveTab("personal")} style={{ padding: '12px 24px', background: activeTab === 'personal' ? '#2563eb' : 'none', color: activeTab === 'personal' ? 'white' : '#64748b', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', fontWeight: 600 }}>ข้อมูลส่วนตัว</button>
         <button onClick={() => setActiveTab("history")} style={{ padding: '12px 24px', background: activeTab === 'history' ? '#2563eb' : 'none', color: activeTab === 'history' ? 'white' : '#64748b', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', fontWeight: 600 }}>ข้อมูลสำหรับสมัครงาน</button>
