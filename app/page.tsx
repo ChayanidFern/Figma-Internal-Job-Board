@@ -4,15 +4,15 @@ import { Job, Application } from "../types";
 import { IconLogout } from "../components/icons";
 import LoginScreen from "../components/LoginScreen";
 import Sidebar from "../components/Sidebar";
-import Dashboard from "../components/Dashboard";
+import Dashboard from "../components/Dashboard"; // Dashboard ตัวที่แก้แล้ว
 import ApplicantList from "../components/ApplicantList";
 import JobManagement from "../components/JobManagement";
 import ProfilePage from "../components/ProfilePage";
 import CreateJobModal from "../components/CreateJobModal";
-import JobDetailModal from "../components/JobDetailModal"; // ✅ Import Modal ดูรายละเอียด
+import JobDetailModal from "../components/JobDetailModal";
 import { 
   getData, getUserProfile, updateAppStatusAction, deleteApplicationAction, 
-  deleteJobAction, createJob, updateJobStatus // ✅ Import action อัปเดตสถานะ
+  deleteJobAction, createJob, updateJobStatus 
 } from "./actions";
 
 export default function Page() {
@@ -24,10 +24,8 @@ export default function Page() {
   const [apps, setApps] = useState<Application[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   
-  // State สำหรับ Modal สร้างงาน
+  // State สำหรับ Modal
   const [showCreateJobModal, setShowCreateJobModal] = useState(false);
-  
-  // ✅ State สำหรับ Modal ดูรายละเอียดงาน (เก็บเป็น Object Job)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   // ฟังก์ชันโหลดข้อมูลกลาง
@@ -42,14 +40,14 @@ export default function Page() {
       refreshData();
       getUserProfile(currentUser).then(data => setUserProfile(data));
     }
-  }, [logged, currentUser, page]);
+  }, [logged, currentUser, page]); 
 
   // ฟังก์ชันจัดการการสร้างงาน
   const handleCreateJob = async (jobData: any) => {
     const result = await createJob(jobData, currentUser);
     if (result.success) {
-      await refreshData();
-      setShowCreateJobModal(false);
+      await refreshData(); 
+      setShowCreateJobModal(false); 
       alert("Job created successfully!");
     } else {
       alert("Failed to create job");
@@ -87,8 +85,8 @@ export default function Page() {
           {page === "dashboard" && (
             <Dashboard 
               jobs={jobs} 
-              myApps={apps.filter(a => a.applicant === currentUser)} 
-              myPostedJobs={jobs.filter(j => j.creator === currentUser)} 
+              // apps={apps}  <-- ❌ ลบออก ไม่ต้องส่งแล้ว
+              currentUser={currentUser} 
             />
           )}
 
@@ -105,18 +103,15 @@ export default function Page() {
               <JobManagement 
                 jobs={jobs} 
                 currentUser={currentUser} 
-                // ✅ 1. ส่ง Job Object ไปที่ State เพื่อเปิด Modal
                 onViewJob={(job) => setSelectedJob(job)} 
                 onDeleteJob={async (id) => { await deleteJobAction(id); refreshData(); }}
                 onAddJob={() => setShowCreateJobModal(true)}
-                // ✅ 2. เชื่อมต่อฟังก์ชันอัปเดตสถานะ
                 onUpdateStatus={async (id, status) => { 
                   await updateJobStatus(id, status); 
                   refreshData(); 
                 }}
               />
               
-              {/* Modal สร้างงาน */}
               {showCreateJobModal && (
                 <CreateJobModal 
                   onClose={() => setShowCreateJobModal(false)}
@@ -124,7 +119,6 @@ export default function Page() {
                 />
               )}
 
-              {/* ✅ 3. Modal ดูรายละเอียดงาน (แสดงเมื่อมีข้อมูลใน selectedJob) */}
               {selectedJob && (
                 <JobDetailModal 
                   job={selectedJob} 

@@ -1,41 +1,48 @@
-import { Job, Application } from "../types";
+"use client";
+import React from 'react';
+import { Job } from "../types";
 
 interface DashboardProps {
   jobs: Job[];
-  myApps: Application[]; // รับค่าใบสมัครเข้ามาเป็น Array
-  myPostedJobs: Job[];
+  // apps: Application[]; // ❌ ลบออก เพราะเปลี่ยนไปนับจาก jobs แทนตามสั่ง
+  currentUser: string;
 }
 
-export default function Dashboard({ jobs, myApps, myPostedJobs }: DashboardProps) {
+export default function Dashboard({ jobs, currentUser }: DashboardProps) {
+  
+  // 1. คำนวณงานที่เปิดรับ (Status = Open)
+  const openJobsCount = jobs.filter(j => j.status === 'Open').length;
+  
+  // 2. คำนวณงานที่ปิดรับสมัคร (Status = Closed) ✅ แก้ไขตามสั่ง
+  // ดึงข้อมูลมาจาก Job Management (jobs array) โดยตรง
+  const closedJobsCount = jobs.filter(j => j.status === 'Closed').length;
+  
+  // 3. คำนวณงานที่ฉันโพสต์ (Creator = currentUser)
+  const myPostedJobsCount = jobs.filter(j => j.creator === currentUser).length;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
       
       {/* ส่วนแสดงสถิติ (Stats Grid) */}
       <div className="stats-grid">
         
-        {/* กล่องที่ 1: งานที่เปิดรับทั้งหมด */}
+        {/* กล่องที่ 1: Total Open Jobs */}
         <div className="stat-box" style={{ borderLeft: '5px solid #3b82f6' }}>
           <div className="stat-label">Total Open Jobs</div>
-          <div className="stat-num">
-            {jobs.filter(j => j.status === 'Open').length}
-          </div>
+          <div className="stat-num">{openJobsCount}</div>
         </div>
 
-        {/* กล่องที่ 2: ใบสมัครของฉัน (My Applications) */}
-        <div className="stat-box" style={{ borderLeft: '5px solid #8b5cf6' }}>
-          <div className="stat-label">My Applications</div>
-          {/* ✅ จุดนี้คือการนับจำนวนใบสมัครทั้งหมดครับ */}
-          <div className="stat-num">
-            {myApps.length}
-          </div>
+        {/* กล่องที่ 2: Total Closed Jobs ✅ เปลี่ยนใหม่ */}
+        {/* เปลี่ยนสีเป็นสีแดง/ส้ม เพื่อสื่อถึงสถานะ Closed */}
+        <div className="stat-box" style={{ borderLeft: '5px solid #ef4444' }}>
+          <div className="stat-label">Total Closed Jobs</div>
+          <div className="stat-num" style={{ color: '#ef4444' }}>{closedJobsCount}</div>
         </div>
 
-        {/* กล่องที่ 3: งานที่ฉันลงประกาศ */}
+        {/* กล่องที่ 3: Jobs I Posted */}
         <div className="stat-box" style={{ borderLeft: '5px solid #10b981' }}>
-          <div className="stat-label">Jobs I Posted</div>
-          <div className="stat-num" style={{ color: '#10b981' }}>
-            {myPostedJobs.length}
-          </div>
+          <div className="stat-label">Total Jobs</div>
+          <div className="stat-num" style={{ color: '#10b981' }}>{myPostedJobsCount}</div>
         </div>
 
       </div>
