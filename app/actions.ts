@@ -1,79 +1,78 @@
-"use server"
+"use server";
+import { neon } from '@neondatabase/serverless';
+import { Job, Application } from "../types";
 
-import { prisma } from "../lib/prisma"
-import { revalidatePath } from "next/cache"
+const sql = neon(process.env.DATABASE_URL!);
 
-// 1. ดึงข้อมูลงานและใบสมัครทั้งหมด
 export async function getData() {
-  const jobsRaw = await prisma.job.findMany({ orderBy: { id: 'desc' } });
-  const appsRaw = await prisma.application.findMany({ orderBy: { id: 'desc' } });
-  return {
-    jobs: jobsRaw.map(j => ({ ...j, date: j.date.toISOString().split('T')[0] })),
-    apps: appsRaw.map(a => ({ ...a, date: a.date.toISOString().split('T')[0] }))
-  };
+  const jobsData = await sql`
+    SELECT id, title, dept, TO_CHAR(date, 'YYYY-MM-DD') as date, status, creator, max_applicants AS "maxApplicants", accepted_count AS "acceptedCount"
+    FROM jobs ORDER BY id DESC
+  `;
+
+  const appsData = await sql`
+    SELECT id, job_id AS "jobId", job_title AS "jobTitle", applicant_name AS "applicantName", applicant_email AS "applicantEmail", applicant_phone AS "applicantPhone", TO_CHAR(date, 'YYYY-MM-DD') as date, status, resume
+    FROM applications ORDER BY id DESC
+  `;
+
+  return { jobs: jobsData as Job[], apps: appsData as Application[] };
 }
 
-// 2. จัดการ Profile และ Sidebar Sync ทันที
-export async function getUserProfile(username: string) {
-  let user = await prisma.user.findUnique({ where: { username } });
-  if (!user) {
-    user = await prisma.user.create({
-      data: { username, name: username, email: `${username}@org.com`, password: "123", position: "Software Engineer" }
-    });
-  }
-  return user;
-}
-
-export async function updateUserProfile(username: string, data: any) {
-  await prisma.user.update({
-    where: { username },
-    data: {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      department: data.department,
-      position: data.position, // สำหรับแสดงผลที่ Sidebar
-      image: data.image,
-      education: data.education,
-      experience: data.experience,
-      skills: data.skills,
-      resume: data.resume 
-    }
-  });
-  revalidatePath('/'); // อัปเดต Sidebar และหน้าจอทุกจุดทันที
-}
-
-// 3. ส่งใบสมัครจากหน้าโปรไฟล์ไปหน้า Applicant
-export async function createApplicationFromProfile(username: string, jobTitle: string, profileData: any) {
-  const job = await prisma.job.findFirst({ where: { title: jobTitle } });
-  await prisma.application.create({
-    data: {
-      jobId: job?.id || 0,
-      jobTitle: jobTitle,
-      applicant: profileData.name || username,
-      email: profileData.email || "",
-      phone: profileData.phone || "",
-      resume: profileData.resume || "",
-      reason: "Applied via Profile Page",
-      creatorOfJob: job?.creator || "Admin",
-      status: "Pending"
-    }
-  });
-  revalidatePath('/');
-}
-
-// 4. ฟังก์ชันจัดการอื่นๆ
-export async function updateAppStatusAction(id: number, status: string) {
-  await prisma.application.update({ where: { id: Number(id) }, data: { status } });
-  revalidatePath('/');
-}
-
-export async function deleteApplicationAction(id: number) {
-  await prisma.application.delete({ where: { id: Number(id) } });
-  revalidatePath('/');
+export async function createJobAction(job: { title: string, dept: string, creator: string, maxApplicants: number }) {
+  const date = new Date().toISOString().split('T')[0];
+  await sql`
+    INSERT INTO jobs (title, dept, date, status, creator, max_applicants, accepted_count)
+    VALUES (${job.title}, ${job.dept}, ${date}, 'Open', ${job.creator}, ${job.maxApplicants}, 0)
+  `;
 }
 
 export async function deleteJobAction(id: number) {
-  await prisma.job.delete({ where: { id: Number(id) } });
-  revalidatePath('/');
+  await sql`DELETE FROM jobs WHERE id = ${id}`;
+}
+
+export async function submitPublicApplication(jobId: number, formData: { name: string, email: string, phone: string, resume: string }) {
+  const jobResult = await sql`SELECT title, status FROM jobs WHERE id = ${jobId}`;
+  if (jobResult.length === 0 || jobResult[0].status === 'Closed') {
+    throw new Error("ขออภัย งานนี้ปิดรับสมัครแล้ว");
+  }
+
+  const jobTitle = jobResult[0].title;
+  const date = new Date().toISOString().split('T')[0];
+
+  await sql`
+    INSERT INTO applications (job_id, job_title, applicant_name, applicant_email, applicant_phone, date, status, resume)
+    VALUES (${jobId}, ${jobTitle}, ${formData.name}, ${formData.email}, ${formData.phone}, ${date}, 'Pending', ${formData.resume})
+  `;
+}
+
+export async function updateAppStatusAction(appId: number, status: 'Pending' | 'Interview' | 'Accepted' | 'Rejected') {
+  const updatedApp = await sql`UPDATE applications SET status = ${status} WHERE id = ${appId} RETURNING job_id`;
+  if (updatedApp.length === 0) return;
+  const jobId = updatedApp[0].job_id;
+
+  const acceptCountResult = await sql`SELECT COUNT(*) as count FROM applications WHERE job_id = ${jobId} AND status = 'Accepted'`;
+  const acceptedCount = Number(acceptCountResult[0].count);
+
+  const jobInfo = await sql`SELECT max_applicants FROM jobs WHERE id = ${jobId}`;
+  const maxApplicants = jobInfo[0].max_applicants;
+
+  const newStatus = acceptedCount >= maxApplicants ? 'Closed' : 'Open';
+  await sql`UPDATE jobs SET accepted_count = ${acceptedCount}, status = ${newStatus} WHERE id = ${jobId}`;
+}
+
+export async function deleteApplicationAction(id: number) {
+  const deletedApp = await sql`DELETE FROM applications WHERE id = ${id} RETURNING job_id, status`;
+  if (deletedApp.length > 0 && deletedApp[0].status === 'Accepted') {
+    const jobId = deletedApp[0].job_id;
+    const acceptCountResult = await sql`SELECT COUNT(*) as count FROM applications WHERE job_id = ${jobId} AND status = 'Accepted'`;
+    const acceptedCount = Number(acceptCountResult[0].count);
+    const jobInfo = await sql`SELECT max_applicants FROM jobs WHERE id = ${jobId}`;
+    const maxApplicants = jobInfo[0].max_applicants;
+    const newStatus = acceptedCount >= maxApplicants ? 'Closed' : 'Open';
+    await sql`UPDATE jobs SET accepted_count = ${acceptedCount}, status = ${newStatus} WHERE id = ${jobId}`;
+  }
+}
+
+export async function getUserProfile(username: string) {
+  return { username, name: username, email: "", phone: "", position: "", image: "" };
 }
